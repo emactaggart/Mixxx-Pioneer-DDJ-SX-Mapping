@@ -104,6 +104,10 @@ PioneerDDJSXRevamp.samplerCueGotoAndPlay = false;
 // If true, PFL / Cue (headphone) is being activated by loading a track into certain deck (default: true).
 PioneerDDJSXRevamp.autoPFL = false;
 
+// Beat jump sizing
+PioneerDDJSXRevamp.minimumBeatjumpSize = 1/16; // Fingers crossed this floatyness works
+PioneerDDJSXRevamp.maximumBeatjumpSize = 32;
+
 
 ///////////////////////////////////////////////////////////////
 //               INIT, SHUTDOWN & GLOBAL HELPER              //
@@ -1223,14 +1227,18 @@ PioneerDDJSXRevamp.changeParameters = function(group, ctrl, value) {
         PioneerDDJSXRevamp.nonPadLedControl(group, PioneerDDJSXRevamp.nonPadLeds.shiftParameterLeftHotCueMode, value);
         if (value) {
             beatjumpSize = engine.getValue(group, "beatjump_size");
-            engine.setValue(group, "beatjump_size", beatjumpSize / 2);
+            if (beatjumpSize > PioneerDDJSXRevamp.minimumBeatjumpSize) {
+                engine.setValue(group, "beatjump_size", beatjumpSize / 2);
+            }
         }
     }
     if (ctrl === PioneerDDJSXRevamp.nonPadLeds.shiftParameterRightHotCueMode) {
         PioneerDDJSXRevamp.nonPadLedControl(group, PioneerDDJSXRevamp.nonPadLeds.shiftParameterRightHotCueMode, value);
         if (value) {
             beatjumpSize = engine.getValue(group, "beatjump_size");
-            engine.setValue(group, "beatjump_size", beatjumpSize * 2);
+            if (beatjumpSize < PioneerDDJSXRevamp.maximumBeatjumpSize) {
+                engine.setValue(group, "beatjump_size", beatjumpSize * 2);
+            }
         }
     }
 
