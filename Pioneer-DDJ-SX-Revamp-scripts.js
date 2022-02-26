@@ -105,7 +105,7 @@ PioneerDDJSXRevamp.samplerCueGotoAndPlay = false;
 PioneerDDJSXRevamp.autoPFL = false;
 
 // Beat jump sizing
-PioneerDDJSXRevamp.minimumBeatjumpSize = 1/16; // Fingers crossed this floatyness works
+PioneerDDJSXRevamp.minimumBeatjumpSize = 1;
 PioneerDDJSXRevamp.maximumBeatjumpSize = 32;
 
 
@@ -1161,6 +1161,62 @@ PioneerDDJSXRevamp.slicerButtons = function(channel, control, value, status, gro
     }
 };
 
+PioneerDDJSXRevamp.beatjumpBackward = function(channel, control, value, status, group) {
+    is_downpress = value
+    if (is_downpress) {
+        beatjumpSize = engine.getValue(group, "beatjump_size");
+        engine.setValue(group, "beatjump_backward", beatjumpSize);
+    }
+}
+
+PioneerDDJSXRevamp.beatjumpForward = function(channel, control, value, status, group) {
+    is_downpress = value
+    if (is_downpress) {
+        beatjumpSize = engine.getValue(group, "beatjump_size");
+        engine.setValue(group, "beatjump_forward", beatjumpSize);
+    }
+}
+
+PioneerDDJSXRevamp.beatjumpAdjustDouble = function(channel, control, value, status, group) {
+    is_downpress = value
+    if (is_downpress) {
+        adjusted_beatjumpSize = engine.getValue(group, "beatjump_size") * 2;
+        // Adjust beatjump size
+        if (adjusted_beatjumpSize <= PioneerDDJSXRevamp.maximumBeatjumpSize) {
+            engine.setValue(group, "beatjump_size", adjusted_beatjumpSize);
+        }
+        // Toggle LEDs appropriately
+        if (adjusted_beatjumpSize >= PioneerDDJSXRevamp.maximumBeatjumpSize) {
+            // We disable the adjust-pad-led if we're at the smallest/largest setting
+            pad_index = 7 - 1
+            PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, pad_index, false, false);
+        } else {
+            pad_index = 6 - 1
+            PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, pad_index, false, true);
+        }
+    }
+}
+
+PioneerDDJSXRevamp.beatjumpAdjustHalve = function(channel, control, value, status, group) {
+    is_downpress = value
+    if (is_downpress) {
+        adjusted_beatjumpSize = engine.getValue(group, "beatjump_size") / 2;
+        // Adjust beatjump size
+        if (adjusted_beatjumpSize > PioneerDDJSXRevamp.minimumBeatjumpSize) {
+            engine.setValue(group, "beatjump_size", adjusted_beatjumpSize);
+        }
+        // Toggle LEDs appropriately
+        if (adjusted_beatjumpSize <= PioneerDDJSXRevamp.minimumBeatjumpSize) {
+            // We disable the adjust-pad-led if we're at the smallest/largest setting
+            pad_index = 6 - 1
+            PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, pad_index, false, false);
+        } else {
+            pad_index = 7 - 1
+            PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, pad_index, false, true);
+        }
+    }
+}
+
 PioneerDDJSXRevamp.beatloopRollButtons = function(channel, control, value, status, group) {
     var index = control - 0x10,
         deck = PioneerDDJSXRevamp.channelGroups[group];
@@ -1226,19 +1282,13 @@ PioneerDDJSXRevamp.changeParameters = function(group, ctrl, value) {
     if (ctrl === PioneerDDJSXRevamp.nonPadLeds.shiftParameterLeftHotCueMode) {
         PioneerDDJSXRevamp.nonPadLedControl(group, PioneerDDJSXRevamp.nonPadLeds.shiftParameterLeftHotCueMode, value);
         if (value) {
-            beatjumpSize = engine.getValue(group, "beatjump_size");
-            if (beatjumpSize > PioneerDDJSXRevamp.minimumBeatjumpSize) {
-                engine.setValue(group, "beatjump_size", beatjumpSize / 2);
-            }
+            PioneerDDJSXRevamp.beatjumpAdjustHalve(group, ctrl, value)
         }
     }
     if (ctrl === PioneerDDJSXRevamp.nonPadLeds.shiftParameterRightHotCueMode) {
         PioneerDDJSXRevamp.nonPadLedControl(group, PioneerDDJSXRevamp.nonPadLeds.shiftParameterRightHotCueMode, value);
         if (value) {
-            beatjumpSize = engine.getValue(group, "beatjump_size");
-            if (beatjumpSize < PioneerDDJSXRevamp.maximumBeatjumpSize) {
-                engine.setValue(group, "beatjump_size", beatjumpSize * 2);
-            }
+            PioneerDDJSXRevamp.beatjumpAdjustDouble(group, ctrl, value)
         }
     }
 
@@ -2066,9 +2116,31 @@ PioneerDDJSXRevamp.beatlooprollLeds = function(value, group, control) {
 
     for (var index in PioneerDDJSXRevamp.selectedLooprollIntervals[deck]) {
         if (PioneerDDJSXRevamp.selectedLooprollIntervals[deck].hasOwnProperty(index)) {
+            padNum = index % 8;
+            // Beatroll LED configuration
             if (control === "beatlooproll_" + PioneerDDJSXRevamp.selectedLooprollIntervals[deck][index] + "_activate") {
-                padNum = index % 8;
                 PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, padNum, shifted, value);
+            }
+            // Serato-like Beatjump LED configuration
+            if (padNum == 4 || padNum == 7) {
+                // Since these are now intended for beatjump, ignite the LEDs to indicated that they are selectable
+                PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, padNum, shifted, true);
+            } else if (padNum == 5) {
+                // beatjumpAdjustHalveLED
+                beatjumpSize = engine.getValue(group, "beatjump_size");
+                if (beatjumpSize <= PioneerDDJSXRevamp.minimumBeatjumpSize) {
+                    PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, padNum, false, false);
+                } else {
+                    PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, padNum, false, true);
+                }
+            } else if (padNum == 6) {
+                // beatjumpAdjustDoubleLED
+                beatjumpSize = engine.getValue(group, "beatjump_size");
+                if (beatjumpSize >= PioneerDDJSXRevamp.maximumBeatjumpSize) {
+                    PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, padNum, false, false);
+                } else {
+                    PioneerDDJSXRevamp.padLedControl(group, PioneerDDJSXRevamp.ledGroups.loopRoll, padNum, false, true);
+                }
             }
         }
     }
