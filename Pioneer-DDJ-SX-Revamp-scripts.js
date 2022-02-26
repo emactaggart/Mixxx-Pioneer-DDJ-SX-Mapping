@@ -102,7 +102,7 @@ PioneerDDJSXRevamp.jumpPreviewPosition = 0.3;
 PioneerDDJSXRevamp.samplerCueGotoAndPlay = false;
 
 // If true, PFL / Cue (headphone) is being activated by loading a track into certain deck (default: true).
-PioneerDDJSXRevamp.autoPFL = true;
+PioneerDDJSXRevamp.autoPFL = false;
 
 
 ///////////////////////////////////////////////////////////////
